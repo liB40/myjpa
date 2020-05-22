@@ -1,0 +1,42 @@
+<persistence>
+    <!--需要配置persistence-unit
+        持久化单元:
+            name:名称
+            transaction-type:事务管理的方式 (暂不支持)
+                JTA:分布式事务管理
+                RESOURCE_LOCAL:本地事务管理
+    -->
+    <persistence-unit name="myJpa" transaction-type="RESOURCE_LOCAL">
+        <!--数据库信息-->
+        <datasource>
+            <url value="jdbc:mysql:///jpa?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false"></url>
+            <driver value="com.mysql.jdbc.Driver"></driver>
+            <username value="root"></username>
+            <password value="pawn2589"></password>
+        </datasource>
+
+        <properties>
+            <!--是否展示sql(暂不支持)-->
+            <property name="show_sql" value="true"></property>
+            <!--自动生成数据库表(暂不支持)
+                create :  创建表(已有该表时先删除然后创建新表)
+                update :  创建表(已有该表时不会创建表)
+                none   :  不创建表
+            -->
+            <property name="auto_database" value="update"></property>
+            <!--名称转换规则
+                hump   :  转为驼峰命名
+            -->
+            <property name="name_rule" value="hump"></property>
+        </properties>
+
+
+        <!--默认从类路径下开始找-->
+        <!--实体类包-->
+        <entity-scan value="model.entity"></entity-scan>
+        <!--dao层包(暂不支持)-->
+        <dao-scan value="model.dao"></dao-scan>
+
+    </persistence-unit>
+
+</persistence>
