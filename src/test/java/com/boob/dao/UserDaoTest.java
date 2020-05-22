@@ -15,7 +15,7 @@ public class UserDaoTest {
 
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("myJpa");
         EntityManager em = emf.createEntityManager();
-        UserDao userDao = new DaoProxy(em).getInstance(UserDao.class);
+        UserDao userDao = em.getMapper(UserDao.class);
         User user = userDao.findById(1);
         System.out.println(user);
     }
@@ -25,7 +25,7 @@ public class UserDaoTest {
 
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("myJpa");
         EntityManager em = emf.createEntityManager();
-        UserDao userDao = new DaoProxy(em).getInstance(UserDao.class);
+        UserDao userDao = em.getMapper(UserDao.class);
         User user = new User();
         user.setName("古力娜扎");
         user.setAge(78);
@@ -38,7 +38,7 @@ public class UserDaoTest {
 
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("myJpa");
         EntityManager em = emf.createEntityManager();
-        UserDao userDao = new DaoProxy(em).getInstance(UserDao.class);
+        UserDao userDao = em.getMapper(UserDao.class);
         User user = new User();
         user.setId(2);
         user.setName("zhangsan");
@@ -52,7 +52,7 @@ public class UserDaoTest {
 
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("myJpa");
         EntityManager em = emf.createEntityManager();
-        UserDao userDao = new DaoProxy(em).getInstance(UserDao.class);
+        UserDao userDao = em.getMapper(UserDao.class);
         userDao.deleteById(2);
         System.out.println();
     }
