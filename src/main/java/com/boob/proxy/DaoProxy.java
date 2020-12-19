@@ -3,7 +3,6 @@ package com.boob.proxy;
 import com.boob.manager.EntityManager;
 import com.boob.model.Dao;
 import com.boob.model.Entity;
-import com.boob.transaction.EntityTransaction;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
@@ -56,31 +55,11 @@ public class DaoProxy implements InvocationHandler {
         } else if ("findById".equals(methodName)) {
             return entityManager.find(entity.getClazz(), args[0]);
         } else if ("save".equals(methodName)) {
-
-            //TODO 解决事务问题
-            EntityTransaction transaction = entityManager.getTransaction();
-            transaction.begin();
             entityManager.persist(args[0]);
-            transaction.commit();
         } else if ("update".equals(methodName)) {
-            EntityTransaction transaction = entityManager.getTransaction();
-            transaction.begin();
             entityManager.merge(args[0]);
-            transaction.commit();
         } else if ("deleteById".equals(methodName)) {
-            EntityTransaction transaction = entityManager.getTransaction();
-            transaction.begin();
-            try {
-                Class clazz = entity.getClazz();
-                Field field = clazz.getDeclaredField(entity.getId());
-                Object o = clazz.newInstance();
-                field.setAccessible(true);
-                field.set(o, args[0]);
-                entityManager.remove(o);
-            } catch (NoSuchFieldException | InstantiationException | IllegalAccessException e) {
-                e.printStackTrace();
-            }
-            transaction.commit();
+            return entityManager.removeById(entity.getClazz(), args[0]);
         }
         return null;
     }

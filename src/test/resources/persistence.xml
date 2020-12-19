@@ -9,7 +9,7 @@
     <persistence-unit name="myJpa" transaction-type="RESOURCE_LOCAL">
         <!--数据库信息-->
         <datasource>
-            <url value="jdbc:mysql:///jpa?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false"></url>
+            <url value="jdbc:mysql:///myjpa?useUnicode=true&amp;characterEncoding=UTF-8&amp;useSSL=false"></url>
             <driver value="com.mysql.jdbc.Driver"></driver>
             <username value="root"></username>
             <password value="pawn2589"></password>

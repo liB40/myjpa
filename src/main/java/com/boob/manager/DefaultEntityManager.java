@@ -3,12 +3,15 @@ package com.boob.manager;
 import com.boob.configuration.PersistenceUnit;
 import com.boob.converter.ConverterFactory;
 import com.boob.enums.SqlTypeEnum;
+import com.boob.executor.DataBaseExecutor;
 import com.boob.executor.ExecutorFactory;
 import com.boob.factory.EntityManagerFactory;
-import com.boob.model.*;
+import com.boob.model.Condition;
+import com.boob.model.Dao;
+import com.boob.model.Entity;
+import com.boob.model.EntityAndCondition;
+import com.boob.model.Sql;
 import com.boob.proxy.DaoProxy;
-import com.boob.transaction.DefaultEntityTransaction;
-import com.boob.transaction.EntityTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,8 +19,10 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
+ * @author Jangbao
  * EntityManager默认实现类
  */
 public class DefaultEntityManager implements EntityManager {
@@ -43,11 +48,6 @@ public class DefaultEntityManager implements EntityManager {
     private Connection connection;
 
     /**
-     * 事务支持
-     */
-    private EntityTransaction entityTransaction;
-
-    /**
      * entity集合
      */
     private Map<Class, Entity> entityMap;
@@ -63,9 +63,14 @@ public class DefaultEntityManager implements EntityManager {
     private Map<Class, Object> mapperMap;
 
     /**
-     * 是否发生了异常
+     * 最后一个事务是否已提交
      */
-    private boolean exceptionHappen = false;
+    private boolean isClose;
+
+    /**
+     * 数据库执行器
+     */
+    private DataBaseExecutor dataBaseExecutor;
 
     public DefaultEntityManager() {
 
@@ -74,7 +79,6 @@ public class DefaultEntityManager implements EntityManager {
     public DefaultEntityManager(EntityManagerFactory entityManagerFactory) {
         this.entityManagerFactory = entityManagerFactory;
         init();
-
     }
 
     /**
@@ -85,16 +89,14 @@ public class DefaultEntityManager implements EntityManager {
         this.connection = entityManagerFactory.getConnection();
         this.entityMap = entityManagerFactory.getEntityMap();
         this.daoMap = entityManagerFactory.getDaoMap();
-        //初始化事务管理器
-        this.entityTransaction = new DefaultEntityTransaction(connection, this);
-
-        initMapper();
+        initMappers();
+        this.dataBaseExecutor = new DataBaseExecutor(entityMap, daoMap, connection);
     }
 
     /**
      * 初始化mapper集合
      */
-    private void initMapper() {
+    private void initMappers() {
         mapperMap = new HashMap<>();
         for (Class clazz : daoMap.keySet()) {
             mapperMap.put(clazz, new DaoProxy(this).getInstance(clazz));
@@ -102,6 +104,18 @@ public class DefaultEntityManager implements EntityManager {
     }
 
     @Override
+    public SqlSession openSession() {
+        if (isClose) {
+            throw new RuntimeException("entityManager 已经关闭了，无法使用操作数据库功能");
+        }
+        Connection connection = entityManagerFactory.getConnection();
+        DefaultEntityTransaction entityTransaction = new DefaultEntityTransaction(connection, this);
+        entityTransaction.begin();
+        return new DefaultSqlSession(entityTransaction, new DataBaseExecutor(this.entityMap, this.daoMap, connection));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
     public <T> T find(Class<T> clazz, Object id) {
         return (T) doExecute(id, clazz, SqlTypeEnum.FIND);
     }
@@ -114,84 +128,34 @@ public class DefaultEntityManager implements EntityManager {
     }
 
     @Override
-    public void remove(Object obj) {
-        Class<?> clazz = obj.getClass();
-        doExecute(obj, clazz, SqlTypeEnum.REMOVE);
+    @SuppressWarnings("unchecked")
+    public <T> T removeById(Class<T> clazz, Object id) {
+        return (T) doExecute(id, clazz, SqlTypeEnum.REMOVE);
 
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <T> T merge(T obj) {
         Class<?> clazz = obj.getClass();
         return (T) doExecute(obj, clazz, SqlTypeEnum.MERGE);
     }
 
+
     /**
-     * 执行操作
+     * entityManager执行操作
      *
-     * @param obj         参数
+     * @param param       参数
      * @param clazz       实体类字节码
      * @param sqlTypeEnum 操作类型
      */
-    private Object doExecute(Object obj, Class<?> clazz, SqlTypeEnum sqlTypeEnum) {
-
-        //如果操作是写类型并且未开启事务
-        if (sqlTypeEnum.isWrite() && !checkTransaction()) {
-            return null;
+    protected Object doExecute(Object param, Class<?> clazz, SqlTypeEnum sqlTypeEnum) {
+        if (isClose) {
+            throw new RuntimeException("entityManager 已经关闭了，无法使用操作数据库功能");
         }
-        checkEntity(clazz);
-        Entity entity = entityMap.get(clazz);
-
-        //获取实体类信息和执行条件封装类
-        EntityAndCondition entityAndCondition = getEntityAndCondition(clazz, obj, entity);
-
-        //获取sql
-        Sql sql = ConverterFactory.getSqlConverterByType(sqlTypeEnum).convert(entityAndCondition);
-
-        //获取执行器
-        try {
-            return ExecutorFactory.getSqlExecutorByType(sqlTypeEnum).execute(connection, sql, entityAndCondition);
-        } catch (SQLException e) {
-            //发生了异常
-            exceptionHappen = true;
-            LOG.warn(e.getMessage());
-        }
-        return null;
+        return this.dataBaseExecutor.doExecute(param, clazz, sqlTypeEnum);
     }
 
-    /**
-     * 是否需要回滚事务
-     *
-     * @return
-     */
-    public boolean needRollback() {
-        return exceptionHappen;
-    }
-
-    /**
-     * 获取EntityAndCondition
-     *
-     * @param clazz  返回值字节码
-     * @param param  参数
-     * @param entity 实体类信息
-     * @param <T>
-     * @return
-     */
-    private <T> EntityAndCondition getEntityAndCondition(Class<T> clazz, Object param, Entity entity) {
-        return new EntityAndCondition(entity, new Condition(param, clazz));
-    }
-
-    /**
-     * 检验是不是entity实体类
-     *
-     * @param clazz 实体类字节码
-     * @return
-     */
-    public void checkEntity(Class clazz) {
-        if (!entityMap.containsKey(clazz)) {
-            throw new IllegalArgumentException(clazz + " 不是Entity实体类");
-        }
-    }
 
     /**
      * 检验是不是该类是不是dao类
@@ -199,7 +163,7 @@ public class DefaultEntityManager implements EntityManager {
      * @param clazz 实体类字节码
      * @return
      */
-    public void checkDao(Class clazz) {
+    private void checkDao(Class clazz) {
         if (!daoMap.containsKey(clazz)) {
             throw new IllegalArgumentException(clazz + " 不是dao类");
         }
@@ -207,7 +171,6 @@ public class DefaultEntityManager implements EntityManager {
 
     @Override
     public Entity getEntity(Class clazz) {
-        checkEntity(clazz);
         return entityMap.get(clazz);
     }
 
@@ -218,20 +181,9 @@ public class DefaultEntityManager implements EntityManager {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <T> T getMapper(Class<T> clazz) {
         return (T) mapperMap.get(clazz);
-    }
-
-    /**
-     * 检查事务是否开启
-     */
-    private boolean checkTransaction() {
-        return this.getTransaction().isActive();
-    }
-
-    @Override
-    public EntityTransaction getTransaction() {
-        return this.entityTransaction;
     }
 
     @Override
@@ -243,5 +195,6 @@ public class DefaultEntityManager implements EntityManager {
     public void close() {
         //归还连接
         entityManagerFactory.putConnection(connection);
+        this.connection = null;
     }
 }

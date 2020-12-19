@@ -12,7 +12,6 @@ import com.boob.model.Entity;
 import com.boob.scanner.DaoScanner;
 import com.boob.scanner.EntityScanner;
 import com.boob.scanner.FileScanner;
-import com.sun.xml.internal.bind.v2.TODO;
 import lombok.Data;
 
 import java.sql.Connection;
@@ -110,7 +109,6 @@ public class DefaultEntityManagerFactory implements EntityManagerFactory {
      * @param map         容器
      */
     private <V> void scanFile(String modelScan, FileScanner<V> fileScanner, Map<Class, V> map) {
-
         fileScanner.scan(modelScan, map);
     }
 

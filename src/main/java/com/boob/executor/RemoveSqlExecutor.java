@@ -11,10 +11,8 @@ public class RemoveSqlExecutor extends AbstractSqlExecutor implements SqlExecuto
     @Override
     protected void executeSql() throws SQLException {
         int remove = ps.executeUpdate();
-        LOG.info("delete: " + sql);
-        if (remove != 0) {
-            LOG.info("删除 " + condition.getParam() + " 成功");
-        }
+        LOG.info("DELETE: " + sql);
+        LOG.info("删除影响行数: " + remove);
     }
 
 }

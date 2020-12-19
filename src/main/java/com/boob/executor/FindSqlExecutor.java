@@ -14,7 +14,7 @@ public class FindSqlExecutor extends AbstractSqlExecutor implements SqlExecutor 
     @Override
     public void executeSql() throws SQLException {
         this.rs = ps.executeQuery();
-        LOG.info("select: " + sql);
+        LOG.info("SELECT: " + sql);
     }
 
     @Override

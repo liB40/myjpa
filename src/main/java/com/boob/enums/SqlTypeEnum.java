@@ -1,13 +1,26 @@
 package com.boob.enums;
 
 /**
+ * @author jangbao
  * sql类型枚举类
  */
 public enum SqlTypeEnum {
 
+    /**
+     * 查询
+     */
     FIND,
+    /**
+     * 保存
+     */
     PERSIST,
+    /**
+     * 修改
+     */
     MERGE,
+    /**
+     * 删除
+     */
     REMOVE,
     ;
 

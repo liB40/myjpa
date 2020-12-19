@@ -62,11 +62,6 @@ public class ConverterFactory {
      */
     public static ResultSetConverter getResultSetConverter(EntityAndCondition entityAndCondition) {
         ResultSetConverter resultSetConverter = RESULT_SET_CONVERTER;
-
-        //取出原有的EntityAndCondition
-        EntityAndCondition oldEntityAndCondition = resultSetConverter.getEntityAndCondition();
-        //置为null,便于GC
-        oldEntityAndCondition = null;
         resultSetConverter.setEntityAndCondition(entityAndCondition);
         return resultSetConverter;
 

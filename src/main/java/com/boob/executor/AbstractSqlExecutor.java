@@ -93,7 +93,6 @@ public abstract class AbstractSqlExecutor implements SqlExecutor {
         }
     }
 
-    ;
 
     /**
      * 执行sql
